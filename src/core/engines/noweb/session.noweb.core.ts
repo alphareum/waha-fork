@@ -72,7 +72,12 @@ import { AckToStatus, StatusToAck } from '@waha/core/utils/acks';
 import { pairs } from '@waha/utils/pairs';
 import { ExtractMessageKeysForRead } from '@waha/core/utils/convertors';
 import { parseMessageIdSerialized } from '@waha/core/utils/ids';
-import { isJidNewsletter, toCusFormat, toJID } from '@waha/core/utils/jids';
+import {
+  isJidNewsletter,
+  jidsFromKey,
+  toCusFormat,
+  toJID,
+} from '@waha/core/utils/jids';
 import { DistinctAck, DistinctMessages } from '@waha/core/utils/reactive';
 import { flipObject, splitAt } from '@waha/helpers';
 import { PairingCodeResponse } from '@waha/structures/auth.dto';
@@ -3082,22 +3087,30 @@ export function getFromToParticipant(key) {
 
 /**
  * Extract the LID-paired sender's underlying phone JID from a baileys message
- * key, normalized to the `@c.us` form. Baileys sets `key.senderPn` to the
- * sender's phone JID (`<number>@s.whatsapp.net`) when the remoteJid is a `@lid`
- * address. Returns `undefined` when not present or when the value is not a
- * recognizable phone JID -- we never want to return the LID itself or any
- * malformed value here, since the field is consumed by webhook clients to
- * choose a reply target.
+ * key, normalized to the `@c.us` form. Returns `undefined` for messages where
+ * the sender has no LID/PN duality (plain `@c.us` chats, broadcasts, etc.).
+ *
+ * Baileys does NOT expose this as `key.senderPn`; it lives at `key.remoteJidAlt`
+ * for 1-on-1 chats and `key.participantAlt` for group chats. The internal
+ * `jidsFromKey` helper already knows the routing -- we just take its `.pn`
+ * output, which is the `<number>@s.whatsapp.net` phone JID baileys derived from
+ * the stanza's `sender_pn` / `participant_pn` / `peer_recipient_pn` attribute,
+ * and pass it through `toCusFormat` for the `@c.us` form WAHA consumers expect.
+ *
+ * Surfaced as `WAMessage.senderPn` on the webhook so consumers (e.g. the
+ * Kolosal complaint backend) can deterministically resolve LID inbounds to
+ * a reply target with an established libsignal session.
  */
 export function extractSenderPn(key): string | undefined {
-  const raw = key?.senderPn;
-  if (typeof raw !== 'string' || raw.length === 0) {
+  if (!key) {
     return undefined;
   }
-  if (!raw.includes('@s.whatsapp.net') && !raw.includes('@c.us')) {
+  const jids = jidsFromKey(key);
+  const pn = jids?.pn;
+  if (typeof pn !== 'string' || pn.length === 0) {
     return undefined;
   }
-  return toCusFormat(raw);
+  return toCusFormat(pn);
 }
 
 function getTo(key, meId = undefined) {
