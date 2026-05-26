@@ -2656,6 +2656,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       body: body || null,
       to: toCusFormat(fromToParticipant.to),
       participant: toCusFormat(fromToParticipant.participant),
+      senderPn: extractSenderPn(message.key),
       // Media
       hasMedia: Boolean(mediaContent),
       media: null,
@@ -3077,6 +3078,26 @@ export function getFromToParticipant(key) {
     to: to,
     participant: participant,
   };
+}
+
+/**
+ * Extract the LID-paired sender's underlying phone JID from a baileys message
+ * key, normalized to the `@c.us` form. Baileys sets `key.senderPn` to the
+ * sender's phone JID (`<number>@s.whatsapp.net`) when the remoteJid is a `@lid`
+ * address. Returns `undefined` when not present or when the value is not a
+ * recognizable phone JID -- we never want to return the LID itself or any
+ * malformed value here, since the field is consumed by webhook clients to
+ * choose a reply target.
+ */
+export function extractSenderPn(key): string | undefined {
+  const raw = key?.senderPn;
+  if (typeof raw !== 'string' || raw.length === 0) {
+    return undefined;
+  }
+  if (!raw.includes('@s.whatsapp.net') && !raw.includes('@c.us')) {
+    return undefined;
+  }
+  return toCusFormat(raw);
 }
 
 function getTo(key, meId = undefined) {
