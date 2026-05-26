@@ -119,6 +119,21 @@ export class WAMessage extends WAMessageBase {
 
   replyTo?: ReplyToMessage;
 
+  /**
+   * For multi-device (LID-paired) senders, the underlying phone JID
+   * (`<number>@c.us`). Forwarded from the NOWEB engine's `message.key.senderPn`
+   * so consumers can reliably resolve `from=<lid>@lid` to the phone JID for
+   * reply targeting (interactive buttons, etc.). Absent when the sender is
+   * not LID-paired or when the engine does not expose it.
+   */
+  @ApiProperty({
+    description:
+      'For LID-paired senders, the underlying phone JID (`<number>@c.us`). Forwarded from baileys `message.key.senderPn` so consumers can resolve LID to phone for reply targeting.',
+    required: false,
+    example: '628111111111@c.us',
+  })
+  senderPn?: string;
+
   /** Returns message in a raw format */
   @ApiProperty({
     description:
