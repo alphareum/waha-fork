@@ -370,6 +370,12 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       auth: state,
       printQRInTerminal: false,
       browser: browser,
+      // Pin WA client version. Without this, Baileys auto-fetches a version
+      // WhatsApp rejects on handshake (-> 401/405 reconnect loop). See
+      // WhiskeySockets/Baileys#2370 and docs/architecture/waha/working-buttons-method.md
+      // "Gotchas" section in the kolosal-whatsapp-complaints repo. Bump when the
+      // pinned version itself starts 401ing.
+      version: [2, 3000, 1033893291],
       logger: this.engineLogger,
       mobile: false,
       defaultQueryTimeoutMs: 120_000,
