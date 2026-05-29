@@ -26,6 +26,10 @@ RUN yarn install
 WORKDIR /git
 ADD . /git
 RUN yarn install
+# Patch bundled Baileys so native_flow buttons render to @lid recipients too.
+# (Adds `|| isLidUser(jid)` to the biz-node condition; fails the build if the anchor
+#  is missing so an unpatched image is never shipped silently. See scripts/patch-lid-buttons.js.)
+RUN node scripts/patch-lid-buttons.js
 RUN yarn build && find ./dist -name "*.d.ts" -delete
 
 # Rebuild sharp from source on x86-64 so it runs on pre-v2 CPUs (no SSE4.2 requirement).
